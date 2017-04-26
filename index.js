@@ -10,9 +10,11 @@ const {
   GraphQLString,
   GraphQLInt,
   GraphQLBoolean,
-  GraphQLNonNull
+  GraphQLNonNull,
+  GraphQLInputObjectType
 } = require( 'graphql' );
 const { getVideoById, getVideos, createVideo } = require( './src/data' );
+const nodeInterface = require('./src/node');
 
 const PORT = process.env.PORT || 3000;
 const server = express();
@@ -22,7 +24,7 @@ const videoType = new GraphQLObjectType({
   description: 'A video that exists',
   fields: {
     id: {
-      type: GraphQLID,
+      type: new GraphQLNonNull( GraphQLID ),
       description: 'The id of the video'
     },
     title: {
@@ -37,8 +39,13 @@ const videoType = new GraphQLObjectType({
       type: GraphQLBoolean,
       description: 'Whether or not the user has watched the video'
     }
-  }
+  },
+  interfaces: [
+    nodeInterface
+  ]
 });
+
+module.exports = videoType;
 
 const queryType = new GraphQLObjectType({
   name: 'QueryType',
@@ -61,6 +68,25 @@ const queryType = new GraphQLObjectType({
   }
 });
 
+const videoInputType = new GraphQLInputObjectType({
+  name: 'VideoInput',
+  fields: {
+    title: {
+      type: GraphQLString,
+      description: 'The title of the video'
+    },
+    duration: {
+      type: GraphQLInt,
+      description: 'The length of the video in minutes'
+    },
+    watched: {
+      type: GraphQLBoolean,
+      description: 'Whether or not the user has watched the video'
+    }
+  }
+});
+
+
 const mutationType = new GraphQLObjectType({
   name: 'Mutation',
   description: 'The root mutation type',
@@ -68,20 +94,11 @@ const mutationType = new GraphQLObjectType({
     createVideo: {
       type: videoType,
       args: {
-        title: {
-          type: new GraphQLNonNull( GraphQLString ),
-          description: 'The title of the video'
-        },
-        duration: {
-          type: new GraphQLNonNull( GraphQLInt ),
-          description: 'The length of the video in minutes'
-        },
-        watched: {
-          type: new GraphQLNonNull( GraphQLBoolean ),
-          description: 'Whether or not the user has watched the video'
+        video: {
+          type: new GraphQLNonNull( videoInputType )
         }
       },
-      resolve: ( _, args ) => createVideo( args )
+      resolve: ( _, args ) => createVideo( args.video )
     }
   }
 });
